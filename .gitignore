@@ -1,0 +1,9 @@
+cat > .gitignore << 'EOF'
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+playwright-report/
+test-results/
+.DS_Store
+EOF

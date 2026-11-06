@@ -1,0 +1,132 @@
+Playwright
+-----------
+
+-> What Playwright Actually is ?
+Think of it like this: normally you click buttons, type in fields, read text on a webpage. 
+Playwright lets Python control a real browser (Chrome/Firefox/Safari) programmatically — it opens the browser, finds elements, clicks/types, 
+and reads what's on the page, so you can write automated checks instead of doing it manually.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Three core concepts you need before writing any code:
+
+----> Browser → Context → Page (the hierarchy)
+* Browser = the actual browser instance (like opening Chrome)
+* Context = an isolated session inside that browser (like an incognito window — separate cookies/storage). You can have multiple contexts in one browser.
+* Page = a single tab inside a context. This is where you actually interact (click, type, read).
+
+----> Locators — how you "find" an element on the page (a button, a text field, a link). Playwright locators are lazy — they don't search immediately, they search right when you perform an action, and they auto-wait (retry) until the element is ready. This is the single biggest difference from Selenium, where you had to manually write WebDriverWait everywhere.
+
+----> Auto-waiting — Playwright automatically waits for an element to be visible, enabled, and stable before clicking/typing. You almost never need manual sleep() calls. This eliminates most of the "flaky test" pain Selenium is known for.
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Pre-requsities
+--------------
+mkdir Playwright              -> Make a seperate folder
+cd Playwright                 -> Move to folder
+python3 -m venv venv          -> Create virtual environment 
+source venv/bin/activate      -> Activate virtual environment
+pip install pytest            -> installing pytest
+pip install playwright        -> installing playwright
+pip install pytest-playwright -> installing pytest-playwright
+playwright install            -> playwright installing
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Playwright Basics:
+
+Create a new file -> test_basics.py 
+
+Navigating and reading the page 
+---------------------------------
+
+from playwright.sync_api import Page               -> importing the Page class from playwright.sync_api module
+
+def test_navigate_and_title(page: Page):           -> test function (test_ followed by funtion name)
+    page.goto("https://www.saucedemo.com/")        -> page class has goto function 
+    print("Page title:", page.title())
+    print("Current URL:", page.url)
+    assert page.title() == "Swag Labs"
+
+------------------------------------------------------------
+to run the particular function 
+
+Command :-  pytest test_basics.py::test_navigate_and_title -v -s
+
+pytest: The core command to invoke the Python testing framework.
+------
+test_basics.py::test_navigate_and_title: The specific path to the test. The double colon :: acts as a delimiter to tell pytest to run only the test_navigate_and_title function inside test_basics.py, ignoring all other tests in that file or directory.
+
+-v (Verbose): Increases verbosity. It displays the full name of each test being run along with its pass/fail status, rather than just showing a single character (like a dot . for pass).
+
+-s (Shortcut for --capture=no): Disables stdout/stderr capturing. It forces pytest to print all standard output (like print() statements, logs, or interactive prompts) directly to the console in real-time as the test executes.
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Locators: finding elements
+
+def test_locators(page: Page):
+    page.goto("https://www.saucedemo.com/")
+
+    # By role (BEST PRACTICE - mimics how users/screen readers see the page)
+    username_field = page.get_by_placeholder("Username")                      -> getting element by placeholder
+    password_field = page.get_by_placeholder("Password")                      -> getting element by placeholder
+    login_button = page.get_by_text("Login")                                -> getting element by text
+
+    # Fill and click
+    username_field.fill("standard_user")        -> .fill method will fill the provided in the particular element
+    password_field.fill("secret_sauce")         -> .fill method will fill the provided in the particular element
+    login_button.click()                      -> .click method click one time click on the given text
+
+
+Other common locators you'll use constantly:
+
+page.get_by_role("button", name="Submit")    # by ARIA role
+page.get_by_text("Add to cart")              # by visible text
+page.get_by_label("Email")                   # by form label
+page.get_by_test_id("checkout-btn")          # by data-testid attribute
+page.locator("#some-id")                     # raw CSS selector (fallback)
+
+Actions
+
+locator.click()
+locator.fill("some text")       # clears field then types
+locator.type("some text")       # types char by char (rarely needed)
+locator.check()                 # checkbox
+locator.select_option("value")  # dropdown
+locator.hover()
+
+
+Assertions 
+-------------
+Playwright has its own assertion library, expect, which — important — also auto-retries until the condition is true or times out. This is different from a plain Python assert.
+
+example:
+
+def test_login_success(page:Page):
+    page.goto("https://www.saucedemo.com/")
+    page.get_by_placeholder("Username").fill("standard_user")
+    page.get_by_placeholder("Password").fill("secret_sauce")
+    page.get_by_text("Login").click()
+
+    # expect() retries automatically until true or time out - great for async UI updates
+    expect(page).to_have_url("https://www.saucedemo.com/inventory.html")
+    expect(page.get_by_text("Products")).to_be_visible()
+
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+Debugging Tools (use these when something fails)
+
+# Run with browser visible (not headless) so you can SEE what's happening
+pytest test_basics.py --headed
+
+# Slow down actions so you can watch each step
+pytest test_basics.py --headed --slowmo 1000
+
+# Playwright's built-in inspector/debugger
+PWDEBUG=1 pytest test_basics.py -k test_login_success
